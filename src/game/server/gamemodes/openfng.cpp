@@ -245,6 +245,12 @@ void CGameControllerOpenFNG::DoRagequit()
 void CGameControllerOpenFNG::HandleFreeze(int Killer, int Victim)
 {
 	CCharacter *pVictim = CHAR(Victim);
+	if (!pVictim) // for odd reasons, this can happen (confirmed by segfault). didn't yet track down why 
+	{
+		D("no pVictim in HandleFreeze(%d, %d)", Killer, Victim);
+		return;
+	}
+
 	if (CFG(BleedOnFreeze))
 	{
 		pVictim->Bleed(1);
@@ -287,6 +293,12 @@ void CGameControllerOpenFNG::HandleFreeze(int Killer, int Victim)
 void CGameControllerOpenFNG::HandleMelt(int Melter, int Meltee)
 {
 	CCharacter *pMeltee = CHAR(Meltee);
+	if (!pMeltee) //due to HandleFreeze, i suspect this COULD also possibly happen. 
+	{
+		D("no pMeltee in HandleMelt(%d, %d)", Melter, Meltee);
+		return;
+	}
+
 	int MeltTeam = pMeltee->GetPlayer()->GetTeam()&1;
 	m_aTeamscore[MeltTeam] += CFG(MeltTeamscore);
 
@@ -316,6 +328,12 @@ void CGameControllerOpenFNG::HandleMelt(int Melter, int Meltee)
 void CGameControllerOpenFNG::HandleSacr(int Killer, int Victim, int ShrineTeam)
 {//assertion: Killer >= 0, victim anyways
 	CCharacter *pVictim = CHAR(Victim);
+
+	if (!pVictim) //due to HandleFreeze, i suspect this COULD also possibly happen. 
+	{
+		D("no pVictim in HandleSacr(%d, %d, %d)", Killer, Victim, ShrineTeam);
+		return;
+	}
 
 	int FailTeam = pVictim->GetPlayer()->GetTeam();
 	bool Wrong = ShrineTeam != -1 && FailTeam == ShrineTeam;
