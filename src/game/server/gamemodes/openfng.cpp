@@ -381,6 +381,15 @@ void CGameControllerOpenFNG::SendFreezeKill(int Killer, int Victim, int Weapon)
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
 }
 
+bool CGameControllerOpenFNG::CanBeMovedOnBalance(int ClientID)
+{
+	if (!IGameController::CanBeMovedOnBalance(ClientID))
+		return false;
+	if (CHAR(ClientID) && CHAR(ClientID)->GetFreezeTicks() > 0)
+		return false;
+	return true;
+}
+
 int CGameControllerOpenFNG::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pUnusedKiller, int Weapon)
 {
 	m_aCltMask[pVictim->GetPlayer()->GetTeam()&1] &= ~(1<<pVictim->GetPlayer()->GetCID());

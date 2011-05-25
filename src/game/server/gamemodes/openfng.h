@@ -87,7 +87,7 @@ public:
 	CGameControllerOpenFNG(class CGameContext *pGameServer);
 	virtual ~CGameControllerOpenFNG();
 
-	//virtual bool CanBeMovedOnBalance(int ClientID);
+	virtual bool CanBeMovedOnBalance(int ClientID);
 	virtual void Tick();
 	virtual void Snap(int SnappingClient);
 	virtual bool OnEntity(int Index, vec2 Pos);
