@@ -125,13 +125,18 @@ void CGameControllerOpenFNG::DoHookers()
 		if (HammeredBy >= 0)
 		{	
 			CCharacter *pHam = CHAR(HammeredBy);
-			bool SameTeam = pChr->GetPlayer()->GetTeam() == pHam->GetPlayer()->GetTeam();
-			m_aLastInteraction[i] = SameTeam ? -1 : HammeredBy;
-			if (!SameTeam && CFG(HammerFreeze) && pChr->GetFreezeTicks() <= 0)
+			if (pHam)
 			{
-				pChr->Freeze(CFG(HammerFreeze) * TS, HammeredBy);
-				m_aFrozenBy[i] = HammeredBy; //suppress kill event being generated
+				bool SameTeam = pChr->GetPlayer()->GetTeam() == pHam->GetPlayer()->GetTeam();
+				m_aLastInteraction[i] = SameTeam ? -1 : HammeredBy;
+				if (!SameTeam && CFG(HammerFreeze) && pChr->GetFreezeTicks() <= 0)
+				{
+					pChr->Freeze(CFG(HammerFreeze) * TS, HammeredBy);
+					m_aFrozenBy[i] = HammeredBy; //suppress kill event being generated
+				}
 			}
+			else
+				m_aLastInteraction[i] = -1;
 		}
 	}
 }
