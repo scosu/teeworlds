@@ -101,7 +101,7 @@ void CGameContext::CreateDamageInd(vec2 Pos, float Angle, int Amount, int CltMas
 	for(int i = 0; i < Amount; i++)
 	{
 		float f = mix(s, e, float(i+1)/float(Amount+2));
-		CNetEvent_DamageInd *pEvent = (CNetEvent_DamageInd *)m_Events.Create(NETEVENTTYPE_DAMAGEIND, sizeof(CNetEvent_DamageInd));
+		CNetEvent_DamageInd *pEvent = (CNetEvent_DamageInd *)m_Events.Create(NETEVENTTYPE_DAMAGEIND, sizeof(CNetEvent_DamageInd), CltMask);
 		if(pEvent)
 		{
 			pEvent->m_X = (int)Pos.x;
