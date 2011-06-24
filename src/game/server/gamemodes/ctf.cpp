@@ -117,7 +117,13 @@ void CGameControllerCTF::Tick()
 {
 	IGameController::Tick();
 
+	if(GameServer()->m_World.m_ResetRequested)
+		return;
+
 	DoTeamScoreWincheck();
+
+	if(GameServer()->m_World.m_Paused)
+		return;
 
 	for(int fi = 0; fi < 2; fi++)
 	{
@@ -220,13 +226,16 @@ void CGameControllerCTF::Tick()
 
 					for(int c = 0; c < MAX_CLIENTS; c++)
 					{
-						if(!GameServer()->m_apPlayers[c])
+						CPlayer *pPlayer = GameServer()->m_apPlayers[c];
+						if(!pPlayer)
 							continue;
 
-						if(GameServer()->m_apPlayers[c]->GetTeam() == fi)
-							GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_EN, GameServer()->m_apPlayers[c]->GetCID());
+						if(pPlayer->GetTeam() == TEAM_SPECTATORS && pPlayer->m_SpectatorID != SPEC_FREEVIEW && GameServer()->m_apPlayers[pPlayer->m_SpectatorID] && GameServer()->m_apPlayers[pPlayer->m_SpectatorID]->GetTeam() == fi)
+							GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_EN, c);
+						else if(pPlayer->GetTeam() == fi)
+							GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_EN, c);
 						else
-							GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_PL, GameServer()->m_apPlayers[c]->GetCID());
+							GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_PL, c);
 					}
 					break;
 				}
