@@ -508,7 +508,7 @@ Shotgun
 Show chat
 == Mostra chat
 
-Show friends
+Show friends only
 == Mostra amici
 
 Show ingame HUD
@@ -661,6 +661,9 @@ Demofile: %s
 == 
 
 Play background music
+== 
+
+Player country:
 == 
 
 Spectate next
