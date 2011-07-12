@@ -60,7 +60,6 @@ void CGameControllerOpenFNG::Reset(bool Destruct)
 
 void CGameControllerOpenFNG::Tick()
 {
-	DoTeamScoreWincheck();
 	IGameController::Tick();
 
 	if (m_GameOverTick != -1 || m_Warmup)

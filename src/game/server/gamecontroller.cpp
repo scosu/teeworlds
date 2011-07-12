@@ -529,29 +529,7 @@ void IGameController::Tick()
 		}
 	}
 
-	// first condition is because player score gets reset pretty late. second is to not get two votes, if both sv_endvote_* are set.
-	// third is to only cause the vote in the last round
-	if (m_RoundStartTick != Server()->Tick() && *g_Config.m_SvMaprotation && !m_AutoVoteCaused && m_RoundCount >= g_Config.m_SvRoundsPerMap - 1)
-	{
-		if (g_Config.m_SvEndvoteTime > 0 && g_Config.m_SvTimelimit > 0 && g_Config.m_SvEndvoteTime < g_Config.m_SvTimelimit*60
-				&& Server()->Tick() - m_RoundStartTick >= (g_Config.m_SvTimelimit*60 - g_Config.m_SvEndvoteTime) * Server()->TickSpeed())
-		{
-				AutoVote(); //time
-		}
-		else if (g_Config.m_SvEndvoteScore > 0 && g_Config.m_SvScorelimit > 0 && g_Config.m_SvEndvoteScore < g_Config.m_SvScorelimit)
-		{
-			int Max = 0;
-			if (m_GameFlags & GAMEFLAG_TEAMS)
-				Max = m_aTeamscore[m_aTeamscore[TEAM_RED] > m_aTeamscore[TEAM_BLUE] ? TEAM_RED : TEAM_BLUE];
-			else
-				for(int i = 0; i < MAX_CLIENTS; ++i)
-					if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->m_Score > Max)
-						Max = GameServer()->m_apPlayers[i]->m_Score;
-
-			if (Max + g_Config.m_SvEndvoteScore >= g_Config.m_SvScorelimit)
-				AutoVote(); //score
-		}
-	}
+	DoWincheck();
 }
 
 void IGameController::AutoVote()
@@ -698,51 +676,50 @@ bool IGameController::CanChangeTeam(CPlayer *pPlayer, int JoinTeam)
 		return true;
 }
 
-void IGameController::DoPlayerScoreWincheck()
+void IGameController::DoWincheck()
 {
-	if(m_GameOverTick == -1 && !m_Warmup)
+	if(m_GameOverTick == -1 && !m_Warmup && !GameServer()->m_World.m_ResetRequested)
 	{
-		// gather some stats
-		int Topscore = 0;
-		int TopscoreCount = 0;
-		for(int i = 0; i < MAX_CLIENTS; i++)
+		if(IsTeamplay())
 		{
-			if(GameServer()->m_apPlayers[i])
+			// check score win condition
+			if((g_Config.m_SvScorelimit > 0 && (m_aTeamscore[TEAM_RED] >= g_Config.m_SvScorelimit || m_aTeamscore[TEAM_BLUE] >= g_Config.m_SvScorelimit)) ||
+				(g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60))
 			{
-				if(GameServer()->m_apPlayers[i]->m_Score > Topscore)
-				{
-					Topscore = GameServer()->m_apPlayers[i]->m_Score;
-					TopscoreCount = 1;
-				}
-				else if(GameServer()->m_apPlayers[i]->m_Score == Topscore)
-					TopscoreCount++;
+				if(m_aTeamscore[TEAM_RED] != m_aTeamscore[TEAM_BLUE])
+					EndRound();
+				else
+					m_SuddenDeath = 1;
 			}
 		}
-
-		// check score win condition
-		if((g_Config.m_SvScorelimit > 0 && Topscore >= g_Config.m_SvScorelimit) ||
-			(g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60))
+		else
 		{
-			if(TopscoreCount == 1)
-				EndRound();
-			else
-				m_SuddenDeath = 1;
-		}
-	}
-}
+			// gather some stats
+			int Topscore = 0;
+			int TopscoreCount = 0;
+			for(int i = 0; i < MAX_CLIENTS; i++)
+			{
+				if(GameServer()->m_apPlayers[i])
+				{
+					if(GameServer()->m_apPlayers[i]->m_Score > Topscore)
+					{
+						Topscore = GameServer()->m_apPlayers[i]->m_Score;
+						TopscoreCount = 1;
+					}
+					else if(GameServer()->m_apPlayers[i]->m_Score == Topscore)
+						TopscoreCount++;
+				}
+			}
 
-void IGameController::DoTeamScoreWincheck()
-{
-	if(m_GameOverTick == -1 && !m_Warmup)
-	{
-		// check score win condition
-		if((g_Config.m_SvScorelimit > 0 && (m_aTeamscore[TEAM_RED] >= g_Config.m_SvScorelimit || m_aTeamscore[TEAM_BLUE] >= g_Config.m_SvScorelimit)) ||
-			(g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60))
-		{
-			if(m_aTeamscore[TEAM_RED] != m_aTeamscore[TEAM_BLUE])
-				EndRound();
-			else
-				m_SuddenDeath = 1;
+			// check score win condition
+			if((g_Config.m_SvScorelimit > 0 && Topscore >= g_Config.m_SvScorelimit) ||
+				(g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60))
+			{
+				if(TopscoreCount == 1)
+					EndRound();
+				else
+					m_SuddenDeath = 1;
+			}
 		}
 	}
 }

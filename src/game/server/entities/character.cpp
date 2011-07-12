@@ -550,7 +550,8 @@ void CCharacter::GiveNinja(bool Silent)
 	m_Ninja.m_ActivationTick = Server()->Tick();
 	m_aWeapons[WEAPON_NINJA].m_Got = true;
 	m_aWeapons[WEAPON_NINJA].m_Ammo = -1;
-	m_LastWeapon = m_ActiveWeapon;
+	if (m_ActiveWeapon != WEAPON_NINJA)
+		m_LastWeapon = m_ActiveWeapon;
 	m_ActiveWeapon = WEAPON_NINJA;
 
 	if (!Silent)

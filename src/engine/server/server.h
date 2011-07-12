@@ -68,6 +68,13 @@ public:
 	class IConsole *Console() { return m_pConsole; }
 	class IStorage *Storage() { return m_pStorage; }
 
+	enum
+	{
+		AUTHED_NO=0,
+		AUTHED_MOD,
+		AUTHED_ADMIN,
+	};
+
 	class CClient
 	{
 	public:
@@ -131,6 +138,7 @@ public:
 	int m_RunServer;
 	int m_MapReload;
 	int m_RconClientID;
+	int m_RconAuthLevel;
 
 	int64 m_Lastheartbeat;
 	//static NETADDR4 master_server;
