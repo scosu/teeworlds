@@ -693,12 +693,12 @@ void CClient::Connect(const char *pAddress)
 
 	ServerInfoRequest();
 
-	if(net_host_lookup(m_aServerAddressStr, &m_ServerAddress, NETTYPE_ALL) != 0)
+	if(net_host_lookup(m_aServerAddressStr, &m_ServerAddress, m_NetClient.NetType()) != 0)
 	{
 		char aBufMsg[256];
 		str_format(aBufMsg, sizeof(aBufMsg), "could not find the address of %s, connecting to localhost", aBuf);
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", aBufMsg);
-		net_host_lookup("localhost", &m_ServerAddress, NETTYPE_ALL);
+		net_host_lookup("localhost", &m_ServerAddress, m_NetClient.NetType());
 	}
 
 	m_RconAuthed = 0;
@@ -1149,7 +1149,7 @@ void CClient::ProcessConnlessPacket(CNetChunk *pPacket)
 		{
 			str_copy(Info.m_aClients[i].m_aName, Up.GetString(CUnpacker::SANITIZE_CC|CUnpacker::SKIP_START_WHITESPACES), sizeof(Info.m_aClients[i].m_aName));
 			str_copy(Info.m_aClients[i].m_aClan, Up.GetString(CUnpacker::SANITIZE_CC|CUnpacker::SKIP_START_WHITESPACES), sizeof(Info.m_aClients[i].m_aClan));
-			Info.m_aClients[i].m_Country = GameClient()->GetCountryIndex(str_toint(Up.GetString()));
+			Info.m_aClients[i].m_Country = str_toint(Up.GetString());
 			Info.m_aClients[i].m_Score = str_toint(Up.GetString());
 			Info.m_aClients[i].m_Player = str_toint(Up.GetString()) != 0 ? true : false;
 		}
@@ -1799,7 +1799,7 @@ void CClient::VersionUpdate()
 {
 	if(m_VersionInfo.m_State == CVersionInfo::STATE_INIT)
 	{
-		Engine()->HostLookup(&m_VersionInfo.m_VersionServeraddr, g_Config.m_ClVersionServer, m_BindAddr.type);
+		Engine()->HostLookup(&m_VersionInfo.m_VersionServeraddr, g_Config.m_ClVersionServer, m_NetClient.NetType());
 		m_VersionInfo.m_State = CVersionInfo::STATE_START;
 	}
 	else if(m_VersionInfo.m_State == CVersionInfo::STATE_START)
@@ -1881,7 +1881,7 @@ void CClient::Run()
 	Input()->Init();
 
 	// start refreshing addresses while we load
-	MasterServer()->RefreshAddresses(m_BindAddr.type);
+	MasterServer()->RefreshAddresses(m_NetClient.NetType());
 
 	// init the editor
 	m_pEditor->Init();
