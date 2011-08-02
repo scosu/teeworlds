@@ -293,7 +293,7 @@ Lht.
 == Luz
 
 Loading
-== Carregando
+== Aguarda por favor
 
 MOTD
 == MOTD

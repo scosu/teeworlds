@@ -54,6 +54,8 @@ public:
 		AUTHED_NO=0,
 		AUTHED_MOD,
 		AUTHED_ADMIN,
+
+		MAX_RCONCMD_SEND=16,
 	};
 
 	class CClient
@@ -101,6 +103,7 @@ public:
 		int m_AuthTries;
 
 		bool m_CustClt;
+		const IConsole::CCommandInfo *m_pRconCmdToSend;
 
 		void Reset();
 	};
@@ -111,6 +114,7 @@ public:
 	CSnapshotBuilder m_SnapshotBuilder;
 	CSnapIDPool m_IDPool;
 	CNetServer m_NetServer;
+	CEcon m_Econ;
 
 	IEngineMap *m_pMap;
 
@@ -120,6 +124,7 @@ public:
 	int m_MapReload;
 	int m_RconClientID;
 	int m_RconAuthLevel;
+	int m_PrintCBIndex;
 
 	int64 m_Lastheartbeat;
 	//static NETADDR4 master_server;
@@ -143,6 +148,8 @@ public:
 	virtual void SetClientScore(int ClientID, int Score);
 
 	void Kick(int ClientID, const char *pReason);
+
+	void DemoRecorder_HandleAutoStart();
 
 	//int Tick()
 	int64 TickStartTime(int Tick);
@@ -171,6 +178,10 @@ public:
 	void SendRconLine(int ClientID, const char *pLine);
 	static void SendRconLineAuthed(const char *pLine, void *pUser);
 
+	void SendRconCmdAdd(const IConsole::CCommandInfo *pCommandInfo, int ClientID);
+	void SendRconCmdRem(const IConsole::CCommandInfo *pCommandInfo, int ClientID);
+	void UpdateClientRconCommands();
+
 	void ProcessClientPacket(CNetChunk *pPacket);
 
 	void SendServerInfo(NETADDR *pAddr, int Token);
@@ -178,7 +189,6 @@ public:
 
 	int BanAdd(NETADDR Addr, int Seconds, const char *pReason);
 	int BanRemove(NETADDR Addr);
-
 
 	void PumpNetwork();
 
@@ -199,6 +209,8 @@ public:
 	static void ConMapReload(IConsole::IResult *pResult, void *pUser);
 	static void ConchainSpecialInfoupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainMaxclientsperipUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainModCommandUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainConsoleOutputLevelUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	void RegisterCommands();
 
