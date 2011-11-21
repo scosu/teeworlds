@@ -151,7 +151,10 @@ void CLoltext::Destroy(CGameWorld *pGameWorld, int TextID)
 	
 	for(int i = 0; i < MAX_PLASMA_PER_LOLTEXT; i++)
 		if (s_aapPlasma[TextID][i])
+		{
 			s_aapPlasma[TextID][i]->Reset();
+			s_aapPlasma[TextID][i] = 0;
+		}
 
 	s_aExpire[TextID] = 0;
 }
