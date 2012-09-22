@@ -60,6 +60,8 @@ protected:
 	int m_UnbalancedTick;
 	bool m_ForceBalanced;
 
+	friend class CCharacter;
+
 public:
 	const char *m_pGameType;
 

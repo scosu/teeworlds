@@ -4,6 +4,7 @@
 #include <engine/shared/config.h>
 #include <game/server/gamecontext.h>
 #include <game/mapitems.h>
+#include <stdio.h>
 
 #include "character.h"
 #include "laser.h"
@@ -77,6 +78,14 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 	GameServer()->m_pController->OnCharacterSpawn(this);
 
+	m_ExplodeTick = -1;
+	m_KilledBy = -1;
+	m_KilledByTeam = -1;
+	if (g_Config.m_SvInsta) {
+		GiveWeapon(WEAPON_RIFLE, 10);
+		SetWeapon(WEAPON_RIFLE);
+	}
+
 	return true;
 }
 
@@ -88,6 +97,10 @@ void CCharacter::Destroy()
 
 void CCharacter::SetWeapon(int W)
 {
+	if (m_ExplodeTick != -1)
+		W = WEAPON_NINJA;
+	else if (W == WEAPON_NINJA)
+		return;
 	if(W == m_ActiveWeapon)
 		return;
 
@@ -112,80 +125,6 @@ bool CCharacter::IsGrounded()
 
 void CCharacter::HandleNinja()
 {
-	if(m_ActiveWeapon != WEAPON_NINJA)
-		return;
-
-	if ((Server()->Tick() - m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000))
-	{
-		// time's up, return
-		m_aWeapons[WEAPON_NINJA].m_Got = false;
-		m_ActiveWeapon = m_LastWeapon;
-
-		SetWeapon(m_ActiveWeapon);
-		return;
-	}
-
-	// force ninja Weapon
-	SetWeapon(WEAPON_NINJA);
-
-	m_Ninja.m_CurrentMoveTime--;
-
-	if (m_Ninja.m_CurrentMoveTime == 0)
-	{
-		// reset velocity
-		m_Core.m_Vel = m_Ninja.m_ActivationDir*m_Ninja.m_OldVelAmount;
-	}
-
-	if (m_Ninja.m_CurrentMoveTime > 0)
-	{
-		// Set velocity
-		m_Core.m_Vel = m_Ninja.m_ActivationDir * g_pData->m_Weapons.m_Ninja.m_Velocity;
-		vec2 OldPos = m_Pos;
-		GameServer()->Collision()->MoveBox(&m_Core.m_Pos, &m_Core.m_Vel, vec2(m_ProximityRadius, m_ProximityRadius), 0.f);
-
-		// reset velocity so the client doesn't predict stuff
-		m_Core.m_Vel = vec2(0.f, 0.f);
-
-		// check if we Hit anything along the way
-		{
-			CCharacter *aEnts[MAX_CLIENTS];
-			vec2 Dir = m_Pos - OldPos;
-			float Radius = m_ProximityRadius * 2.0f;
-			vec2 Center = OldPos + Dir * 0.5f;
-			int Num = GameServer()->m_World.FindEntities(Center, Radius, (CEntity**)aEnts, MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
-
-			for (int i = 0; i < Num; ++i)
-			{
-				if (aEnts[i] == this)
-					continue;
-
-				// make sure we haven't Hit this object before
-				bool bAlreadyHit = false;
-				for (int j = 0; j < m_NumObjectsHit; j++)
-				{
-					if (m_apHitObjects[j] == aEnts[i])
-						bAlreadyHit = true;
-				}
-				if (bAlreadyHit)
-					continue;
-
-				// check so we are sufficiently close
-				if (distance(aEnts[i]->m_Pos, m_Pos) > (m_ProximityRadius * 2.0f))
-					continue;
-
-				// Hit a player, give him damage and stuffs...
-				GameServer()->CreateSound(aEnts[i]->m_Pos, SOUND_NINJA_HIT);
-				// set his velocity to fast upward (for now)
-				if(m_NumObjectsHit < 10)
-					m_apHitObjects[m_NumObjectsHit++] = aEnts[i];
-
-				aEnts[i]->TakeDamage(vec2(0, -10.0f), g_pData->m_Weapons.m_Ninja.m_pBase->m_Damage, m_pPlayer->GetCID(), WEAPON_NINJA);
-			}
-		}
-
-		return;
-	}
-
 	return;
 }
 
@@ -296,6 +235,22 @@ void CCharacter::FireWeapon()
 				if ((pTarget == this) || GameServer()->Collision()->IntersectLine(ProjStartPos, pTarget->m_Pos, NULL, NULL))
 					continue;
 
+				if (pTarget->GetPlayer()->GetTeam() == m_pPlayer->GetTeam() && pTarget->m_ExplodeTick != -1) {
+					pTarget->m_Defuse += 1;
+					if (pTarget->m_Defuse == g_Config.m_SvDefuseSteps) {
+						pTarget->m_ExplodeTick = -1;
+						pTarget->m_KilledBy = -1;
+						pTarget->m_KilledByTeam = -1;
+						pTarget->SetWeapon(pTarget->m_LastWeapon);
+						GameServer()->SendBroadcast("", m_pPlayer->GetCID());
+						m_pPlayer->m_Score += g_Config.m_SvDefuseScorePlayer;
+						if (GameServer()->m_pController->IsTeamplay())
+							GameServer()->m_pController->m_aTeamscore[m_pPlayer->GetTeam()] += g_Config.m_SvDefuseScoreTeam;
+					}
+					GameServer()->CreateSound(m_Pos, SOUND_HAMMER_HIT);
+					continue;
+				}
+
 				// set his velocity to fast upward (for now)
 				if(length(pTarget->m_Pos-ProjStartPos) > 0.0f)
 					GameServer()->CreateHammerHit(pTarget->m_Pos-normalize(pTarget->m_Pos-ProjStartPos)*m_ProximityRadius*0.5f);
@@ -321,34 +276,13 @@ void CCharacter::FireWeapon()
 
 		case WEAPON_GUN:
 		{
-			Direction.x += m_Core.m_Vel.x / GameServer()->Tuning()->m_GunSpeed * Server()->TickSpeed();
-			Direction.y += m_Core.m_Vel.y / GameServer()->Tuning()->m_GunSpeed * Server()->TickSpeed();
-			CProjectile *pProj = new CProjectile(GameWorld(), WEAPON_GUN,
-				m_pPlayer->GetCID(),
-				ProjStartPos,
-				Direction,
-				(int)(Server()->TickSpeed()*GameServer()->Tuning()->m_GunLifetime),
-				1, 0, 0, -1, WEAPON_GUN);
-
-			// pack the Projectile and send it to the client Directly
-			CNetObj_Projectile p;
-			pProj->FillInfo(&p);
-
-			CMsgPacker Msg(NETMSGTYPE_SV_EXTRAPROJECTILE);
-			Msg.AddInt(1);
-			for(unsigned i = 0; i < sizeof(CNetObj_Projectile)/sizeof(int); i++)
-				Msg.AddInt(((int *)&p)[i]);
-
-			Server()->SendMsg(&Msg, 0, m_pPlayer->GetCID());
-
+			GameServer()->CreateExplosion(ProjStartPos, m_pPlayer->GetCID(), WEAPON_GUN, true);
 			GameServer()->CreateSound(m_Pos, SOUND_GUN_FIRE);
 		} break;
 
 		case WEAPON_SHOTGUN:
 		{
 			int ShotSpread = 2;
-			Direction.x += m_Core.m_Vel.x / GameServer()->Tuning()->m_ShotgunSpeed * Server()->TickSpeed();
-			Direction.y += m_Core.m_Vel.y / GameServer()->Tuning()->m_ShotgunSpeed * Server()->TickSpeed();
 
 			CMsgPacker Msg(NETMSGTYPE_SV_EXTRAPROJECTILE);
 			Msg.AddInt(ShotSpread*2+1);
@@ -382,8 +316,6 @@ void CCharacter::FireWeapon()
 
 		case WEAPON_GRENADE:
 		{
-			Direction.x += m_Core.m_Vel.x / GameServer()->Tuning()->m_GrenadeSpeed * Server()->TickSpeed();
-			Direction.y += m_Core.m_Vel.y / GameServer()->Tuning()->m_GrenadeSpeed * Server()->TickSpeed();
 			CProjectile *pProj = new CProjectile(GameWorld(), WEAPON_GRENADE,
 				m_pPlayer->GetCID(),
 				ProjStartPos,
@@ -408,6 +340,8 @@ void CCharacter::FireWeapon()
 		{
 			new CLaser(GameWorld(), m_Pos, Direction, GameServer()->Tuning()->m_LaserReach, m_pPlayer->GetCID());
 			GameServer()->CreateSound(m_Pos, SOUND_RIFLE_FIRE);
+			if (g_Config.m_SvInsta)
+				m_aWeapons[WEAPON_RIFLE].m_Ammo += 1;
 		} break;
 
 		case WEAPON_NINJA:
@@ -555,6 +489,23 @@ void CCharacter::Tick()
 		m_pPlayer->m_ForceBalanced = false;
 	}
 
+	if (m_ExplodeTick != -1) {
+		if (m_KilledBy != -1 && GameServer()->m_apPlayers[m_KilledBy] == NULL)
+			m_KilledBy = -1;
+		if (m_ExplodeTick <= Server()->Tick()) {
+			Die(m_pPlayer->GetCID(), WEAPON_WORLD);
+		} else {
+			int remaining = m_ExplodeTick - Server()->Tick();
+			if (remaining % (Server()->TickSpeed() / 10) == 0) {
+				char buf[128];
+				sprintf(buf, "%.1f", (float)remaining / Server()->TickSpeed());
+				GameServer()->SendBroadcast(buf, m_pPlayer->GetCID());
+			}
+			if ((m_ExplodeTick - Server()->Tick()) % Server()->TickSpeed() == 0)
+				GameServer()->CreateDamageInd(m_Pos, 0, m_Defuse);
+		}
+	}
+
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true);
 
@@ -669,7 +620,7 @@ bool CCharacter::IncreaseHealth(int Amount)
 
 bool CCharacter::IncreaseArmor(int Amount)
 {
-	if(m_Armor >= 10)
+	if(m_ExplodeTick != -1 || m_Armor >= 10)
 		return false;
 	m_Armor = clamp(m_Armor+Amount, 0, 10);
 	return true;
@@ -677,8 +628,6 @@ bool CCharacter::IncreaseArmor(int Amount)
 
 void CCharacter::Die(int Killer, int Weapon)
 {
-	// we got to wait 0.5 secs before respawning
-	m_pPlayer->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()/2;
 	int ModeSpecial = GameServer()->m_pController->OnCharacterDeath(this, GameServer()->m_apPlayers[Killer], Weapon);
 
 	char aBuf[256];
@@ -694,21 +643,74 @@ void CCharacter::Die(int Killer, int Weapon)
 	Msg.m_Weapon = Weapon;
 	Msg.m_ModeSpecial = ModeSpecial;
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
+	if (m_ExplodeTick != -1 || Weapon == WEAPON_WORLD || Weapon == WEAPON_GAME) {
+		if (Weapon == WEAPON_SELF)
+			return;
+		// we got to wait 0.5 secs before respawning
+		m_pPlayer->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()/2;
 
-	// a nice sound
-	GameServer()->CreateSound(m_Pos, SOUND_PLAYER_DIE);
+		// a nice sound
+		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_DIE);
+		GameServer()->CreateSound(m_Pos, SOUND_GRENADE_EXPLODE);
+		GameServer()->CreateExplosion(m_Pos, m_pPlayer->GetCID(), WEAPON_NINJA, false, g_Config.m_SvBombRadius/2, g_Config.m_SvBombRadius, g_Config.m_SvBombDamage, 1);
 
-	// this is for auto respawn after 3 secs
-	m_pPlayer->m_DieTick = Server()->Tick();
+		// this is for auto respawn after 3 secs
+		m_pPlayer->m_DieTick = Server()->Tick();
 
-	m_Alive = false;
-	GameServer()->m_World.RemoveEntity(this);
-	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
-	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
+		m_Alive = false;
+		GameServer()->m_World.RemoveEntity(this);
+		GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
+		GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
+		CPlayer *P;
+		if (GameServer()->m_pController->IsTeamplay()) {
+			if (m_KilledByTeam != -1) {
+				if (m_KilledByTeam == m_pPlayer->m_Team) {
+					GameServer()->m_pController->m_aTeamscore[m_pPlayer->m_Team] -= g_Config.m_SvBombifyTeam;
+					if (m_KilledBy >= 0) {
+						P = GameServer()->m_apPlayers[m_KilledBy];
+						P->m_Score -= g_Config.m_SvBombifyPlayer;
+					}
+				} else {
+					GameServer()->m_pController->m_aTeamscore[m_KilledByTeam] += g_Config.m_SvBombifyTeam;
+					if (m_KilledBy >= 0) {
+						P = GameServer()->m_apPlayers[m_KilledBy];
+						P->m_Score += g_Config.m_SvBombifyPlayer;
+					}
+				}
+			}
+			if (Weapon != WEAPON_GAME) {
+				if (Killer == m_pPlayer->GetCID()) {
+					Killer = m_KilledBy;
+				}
+				if (Killer >= 0) {
+					P = GameServer()->m_apPlayers[Killer];
+					if (P->m_Team == m_pPlayer->m_Team) {
+						GameServer()->m_pController->m_aTeamscore[P->m_Team] -= g_Config.m_SvKillTeam;
+						P->m_Score -= g_Config.m_SvKillPlayer;
+					} else {
+						GameServer()->m_pController->m_aTeamscore[P->m_Team] += g_Config.m_SvKillTeam;
+						P->m_Score += g_Config.m_SvKillPlayer;
+					}
+				}
+			}
+		}
+		GameServer()->SendBroadcast("", m_pPlayer->GetCID());
+	} else {
+		m_ExplodeTick = Server()->Tick() + g_Config.m_SvBombTimer * Server()->TickSpeed();
+		m_KilledBy = Killer;
+		m_KilledByTeam = GameServer()->m_apPlayers[Killer]->GetTeam();
+		m_Armor = 0;
+		m_Health = 10;
+		m_Defuse = 0;
+		SetWeapon(WEAPON_NINJA);
+	}
+
 }
 
 bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 {
+	if (m_ExplodeTick != -1)
+		Dmg = (Dmg + 1) / 2;
 	m_Core.m_Vel += Force;
 
 	if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From) && !g_Config.m_SvTeamdamage)
@@ -716,7 +718,7 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 
 	// m_pPlayer only inflicts half damage on self
 	if(From == m_pPlayer->GetCID())
-		Dmg = max(1, Dmg/2);
+		Dmg = max(0, Dmg/2);
 
 	m_DamageTaken++;
 
@@ -790,13 +792,15 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 		return false;
 	}
 
-	if (Dmg > 2)
-		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG);
-	else
-		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_SHORT);
+	if (Dmg > 0) {
+		if (Dmg > 2)
+			GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG);
+		else
+			GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_SHORT);
 
-	m_EmoteType = EMOTE_PAIN;
-	m_EmoteStop = Server()->Tick() + 500 * Server()->TickSpeed() / 1000;
+		m_EmoteType = EMOTE_PAIN;
+		m_EmoteStop = Server()->Tick() + 500 * Server()->TickSpeed() / 1000;
+	}
 
 	return true;
 }

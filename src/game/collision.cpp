@@ -124,7 +124,7 @@ int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *p
 		if(CheckPoint(Cur.x, Cur.y))
 		{
 			if(pOutCollision)
-				*pOutCollision = Pos;
+				*pOutCollision = Cur;
 			if(pOutBeforeCollision)
 				*pOutBeforeCollision = NextTile(Cur, vec2(-Dir.x, -Dir.y));
 			return GetCollisionAt(Cur.x, Cur.y);

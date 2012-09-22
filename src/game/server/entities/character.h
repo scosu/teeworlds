@@ -129,6 +129,10 @@ private:
 	CCharacterCore m_SendCore; // core that we should send
 	CCharacterCore m_ReckoningCore; // the dead reckoning core
 
+	int m_ExplodeTick;
+	int m_KilledBy;
+	int m_KilledByTeam;
+	int m_Defuse;
 };
 
 #endif

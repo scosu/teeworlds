@@ -56,7 +56,7 @@ MACRO_CONFIG_INT(GfxNoclip, gfx_noclip, 0, 0, 1, CFGFLAG_CLIENT|CFGFLAG_SAVE, "D
 
 // server
 MACRO_CONFIG_INT(SvWarmup, sv_warmup, 0, 0, 0, CFGFLAG_SERVER, "Number of seconds to do warmup before round starts")
-MACRO_CONFIG_STR(SvMotd, sv_motd, 900, "", CFGFLAG_SERVER, "Message of the day to display for the clients")
+MACRO_CONFIG_STR(SvMotd, sv_motd, 900, "BOMB MOD\nEvery tee is a bomb. If you kill a player the first time, it gets a moving bomb (ninja skin).By hitting the bomb with a hammer, you can defuse it. You can kill the bomb by shooting it again, but your weapons will only make half damage.\n\nSCORES\nKill to bomb (only if the bomb explodes finally):\nTeam +1 Player +1\nBomb kill:\nTeam +1 Player +1\nBomb defuse:\nTeam +1 Player +1\n\ngithub.com/scosu/teeworlds/tree/bomb0.6.1", CFGFLAG_SERVER, "Message of the day to display for the clients")
 MACRO_CONFIG_INT(SvTeamdamage, sv_teamdamage, 0, 0, 1, CFGFLAG_SERVER, "Team damage")
 MACRO_CONFIG_STR(SvMaprotation, sv_maprotation, 768, "", CFGFLAG_SERVER, "Maps to rotate between")
 MACRO_CONFIG_INT(SvRoundsPerMap, sv_rounds_per_map, 1, 1, 100, CFGFLAG_SERVER, "Number of rounds on each map before rotating")
@@ -78,8 +78,23 @@ MACRO_CONFIG_INT(SvStrictSpectateMode, sv_strict_spectate_mode, 0, 0, 1, CFGFLAG
 MACRO_CONFIG_INT(SvVoteSpectate, sv_vote_spectate, 1, 0, 1, CFGFLAG_SERVER, "Allow voting to move players to spectators")
 MACRO_CONFIG_INT(SvVoteSpectateRejoindelay, sv_vote_spectate_rejoindelay, 3, 0, 1000, CFGFLAG_SERVER, "How many minutes to wait before a player can rejoin after being moved to spectators by vote")
 MACRO_CONFIG_INT(SvVoteKick, sv_vote_kick, 1, 0, 1, CFGFLAG_SERVER, "Allow voting to kick players")
+MACRO_CONFIG_INT(SvVoteKickProtection, sv_vote_kick_protection, 3, 0, 100, CFGFLAG_SERVER, "Kick protection for joined players in minutes")
 MACRO_CONFIG_INT(SvVoteKickMin, sv_vote_kick_min, 0, 0, MAX_CLIENTS, CFGFLAG_SERVER, "Minimum number of players required to start a kick vote")
 MACRO_CONFIG_INT(SvVoteKickBantime, sv_vote_kick_bantime, 5, 0, 1440, CFGFLAG_SERVER, "The time to ban a player if kicked by vote. 0 makes it just use kick")
+
+
+MACRO_CONFIG_INT(SvDefuseSteps, sv_defuse_steps, 4, 0, 20, CFGFLAG_SERVER, "# team hammer hits necessary to defuse bomb")
+MACRO_CONFIG_INT(SvBombRadius, sv_bomb_radius, 200, 0, 20000000, CFGFLAG_SERVER, "Radius of exploding bomb")
+MACRO_CONFIG_INT(SvBombDamage, sv_bomb_damage, 20, 0, 20000000, CFGFLAG_SERVER, "Maximum damage of exploding bomb")
+MACRO_CONFIG_INT(SvBombTimer, sv_bomb_timer, 10, 0, 20000000, CFGFLAG_SERVER, "# seconds after which the bomb explodes")
+MACRO_CONFIG_INT(SvInsta, sv_insta, 0, 0, 1, CFGFLAG_SERVER, "Instagib mode")
+
+MACRO_CONFIG_INT(SvDefuseScorePlayer, sv_defuse_score_player, 1, 0, 10000, CFGFLAG_SERVER, "Player-score for bomb defusion")
+MACRO_CONFIG_INT(SvDefuseScoreTeam, sv_defuse_score_team, 1, 0, 10000, CFGFLAG_SERVER, "Team-score for bomb defusion")
+MACRO_CONFIG_INT(SvBombifyTeam, sv_bombify_team, 1, 0, 100, CFGFLAG_SERVER, "Teamscore for bombifying player")
+MACRO_CONFIG_INT(SvBombifyPlayer, sv_bombify_player, 1, 0, 100, CFGFLAG_SERVER, "Playerscore for bombifying player")
+MACRO_CONFIG_INT(SvKillTeam, sv_kill_team, 1, 0, 100, CFGFLAG_SERVER, "Teamscore for killing player")
+MACRO_CONFIG_INT(SvKillPlayer, sv_kill_player, 1, 0, 100, CFGFLAG_SERVER, "Playerscore for killing player")
 
 // debug
 #ifdef CONF_DEBUG // this one can crash the server if not used correctly

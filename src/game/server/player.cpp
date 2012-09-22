@@ -21,6 +21,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_SpectatorID = SPEC_FREEVIEW;
 	m_LastActionTick = Server()->Tick();
 	m_TeamChangeTick = Server()->Tick();
+	m_ProtectionTick = Server()->Tick() + g_Config.m_SvVoteKickProtection * 60 * Server()->TickSpeed();
 }
 
 CPlayer::~CPlayer()
@@ -219,8 +220,6 @@ void CPlayer::KillCharacter(int Weapon)
 	if(m_pCharacter)
 	{
 		m_pCharacter->Die(m_ClientID, Weapon);
-		delete m_pCharacter;
-		m_pCharacter = 0;
 	}
 }
 

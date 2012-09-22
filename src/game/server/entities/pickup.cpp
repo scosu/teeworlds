@@ -1,5 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#include <engine/shared/config.h>
 #include <game/generated/protocol.h>
 #include <game/server/gamecontext.h>
 #include "pickup.h"
@@ -26,6 +27,8 @@ void CPickup::Reset()
 
 void CPickup::Tick()
 {
+	if (g_Config.m_SvInsta)
+		m_SpawnTick = Server()->Tick() + 1;
 	// wait for respawn
 	if(m_SpawnTick > 0)
 	{

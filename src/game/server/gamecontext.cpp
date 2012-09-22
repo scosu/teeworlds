@@ -115,7 +115,7 @@ void CGameContext::CreateHammerHit(vec2 Pos)
 }
 
 
-void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamage)
+void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamage, float InnerRadius, float Radius, int Damage, int NoSelfDamage)
 {
 	// create the event
 	CNetEvent_Explosion *pEvent = (CNetEvent_Explosion *)m_Events.Create(NETEVENTTYPE_EXPLOSION, sizeof(CNetEvent_Explosion));
@@ -125,25 +125,23 @@ void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamag
 		pEvent->m_Y = (int)Pos.y;
 	}
 
-	if (!NoDamage)
+	CCharacter *apEnts[MAX_CLIENTS];
+	int Num = m_World.FindEntities(Pos, Radius, (CEntity**)apEnts, MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
+	for(int i = 0; i < Num; i++)
 	{
-		// deal damage
-		CCharacter *apEnts[MAX_CLIENTS];
-		float Radius = 135.0f;
-		float InnerRadius = 48.0f;
-		int Num = m_World.FindEntities(Pos, Radius, (CEntity**)apEnts, MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
-		for(int i = 0; i < Num; i++)
-		{
-			vec2 Diff = apEnts[i]->m_Pos - Pos;
-			vec2 ForceDir(0,1);
-			float l = length(Diff);
-			if(l)
-				ForceDir = normalize(Diff);
-			l = 1-clamp((l-InnerRadius)/(Radius-InnerRadius), 0.0f, 1.0f);
-			float Dmg = 6 * l;
-			if((int)Dmg)
-				apEnts[i]->TakeDamage(ForceDir*Dmg*2, (int)Dmg, Owner, Weapon);
-		}
+		if (NoSelfDamage && apEnts[i]->GetPlayer()->GetCID() == Owner)
+			continue;
+		vec2 Diff = apEnts[i]->m_Pos - Pos;
+		vec2 ForceDir(0,1);
+		float l = length(Diff);
+		if(l)
+			ForceDir = normalize(Diff);
+		l = 1-clamp((l-InnerRadius)/(Radius-InnerRadius), 0.0f, 1.0f);
+		float Dmg = Damage * l;
+		if (NoDamage)
+			apEnts[i]->TakeDamage(ForceDir*Dmg*2, 0, Owner, Weapon);
+		else
+			apEnts[i]->TakeDamage(ForceDir*Dmg*2, (int)Dmg, Owner, Weapon);
 	}
 }
 
@@ -701,6 +699,14 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				char aBufKick[128];
 				str_format(aBufKick, sizeof(aBufKick), "'%s' called for vote to kick you", Server()->ClientName(ClientID));
 				SendChatTarget(KickID, aBufKick);
+				return;
+			}
+
+			if (m_apPlayers[KickID]->GetProtectionTick() > Server()->Tick())
+			{
+				char aBuf[256];
+				str_format(aBuf, sizeof(aBuf), "Player '%s' has kick protection.", Server()->ClientName(KickID));
+				SendChatTarget(ClientID, aBuf);
 				return;
 			}
 
@@ -1358,9 +1364,7 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	//players = new CPlayer[MAX_CLIENTS];
 
 	// select gametype
-	if(str_comp(g_Config.m_SvGametype, "mod") == 0)
-		m_pController = new CGameControllerMOD(this);
-	else if(str_comp(g_Config.m_SvGametype, "ctf") == 0)
+	if(str_comp(g_Config.m_SvGametype, "ctf") == 0)
 		m_pController = new CGameControllerCTF(this);
 	else if(str_comp(g_Config.m_SvGametype, "tdm") == 0)
 		m_pController = new CGameControllerTDM(this);

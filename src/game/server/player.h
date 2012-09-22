@@ -32,6 +32,8 @@ public:
 	void OnPredictedInput(CNetObj_PlayerInput *NewInput);
 	void OnDisconnect(const char *pReason);
 
+	int GetProtectionTick() const { return m_ProtectionTick; }
+
 	void KillCharacter(int Weapon = WEAPON_GAME);
 	CCharacter *GetCharacter();
 
@@ -107,6 +109,8 @@ private:
 	bool m_Spawning;
 	int m_ClientID;
 	int m_Team;
+	int m_ProtectionTick;
+	friend class CCharacter;
 };
 
 #endif
