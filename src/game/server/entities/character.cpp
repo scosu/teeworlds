@@ -680,10 +680,7 @@ void CCharacter::Die(int Killer, int Weapon)
 					}
 				}
 			}
-			if (Weapon != WEAPON_GAME) {
-				if (Killer == m_pPlayer->GetCID()) {
-					Killer = m_KilledBy;
-				}
+			if (Weapon != WEAPON_GAME && m_ExplodeTick != Server()->Tick()) {
 				if (Killer >= 0) {
 					P = GameServer()->m_apPlayers[Killer];
 					if (P->m_Team == m_pPlayer->m_Team) {
