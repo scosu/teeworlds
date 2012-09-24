@@ -1,5 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#include <engine/shared/config.h>
 #include <new>
 #include <engine/shared/config.h>
 #include "player.h"
@@ -22,6 +23,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_LastActionTick = Server()->Tick();
 	m_ChatScore = 0;
 	m_TeamChangeTick = Server()->Tick();
+	m_ProtectionTick = Server()->Tick() + g_Config.m_SvVoteKickProtection * Server()->TickSpeed();
 }
 
 CPlayer::~CPlayer()
