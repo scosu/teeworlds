@@ -654,10 +654,11 @@ void CCharacter::Die(int Killer, int Weapon)
 		// a nice sound
 		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_DIE);
 		GameServer()->CreateSound(m_Pos, SOUND_GRENADE_EXPLODE);
-		GameServer()->CreateExplosion(m_Pos, m_pPlayer->GetCID(), WEAPON_NINJA, false, g_Config.m_SvBombRadius/2, g_Config.m_SvBombRadius, g_Config.m_SvBombDamage, 1);
 
 		// this is for auto respawn after 3 secs
 		m_pPlayer->m_DieTick = Server()->Tick();
+
+		GameServer()->CreateExplosion(m_Pos, m_pPlayer->GetCID(), WEAPON_NINJA, false, g_Config.m_SvBombRadius/2, g_Config.m_SvBombRadius, g_Config.m_SvBombDamage, 1);
 
 		m_Alive = false;
 		GameServer()->m_World.RemoveEntity(this);
