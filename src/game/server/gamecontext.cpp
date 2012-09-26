@@ -746,6 +746,11 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				SendChatTarget(ClientID, "You can't move yourself");
 				return;
 			}
+			if (m_apPlayers[SpectateID]->GetProtectionTick() > Server()->Tick())
+			{
+				SendChatTarget(ClientID, "You can't vote to move players who just joined to spectators.");
+				return;
+			}
 
 			str_format(aChatmsg, sizeof(aChatmsg), "'%s' called for vote to move '%s' to spectators (%s)", Server()->ClientName(ClientID), Server()->ClientName(SpectateID), pReason);
 			str_format(aDesc, sizeof(aDesc), "move '%s' to spectators", Server()->ClientName(SpectateID));
