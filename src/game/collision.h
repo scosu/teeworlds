@@ -14,7 +14,6 @@ class CCollision
 
 	bool IsTileSolid(int x, int y);
 	int GetTile(int x, int y);
-	vec2 NextTile(vec2 Pos, vec2 Dir);
 
 public:
 	enum
